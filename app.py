@@ -8,7 +8,7 @@ import qrcode
 import re
 import streamlit.components.v1 as components
 
-# Configurare pagină comercială PRO cu BT Pay
+# Configurare pagină comercială PRO cu BT Pay Personalizat
 st.set_page_config(page_title="Asistent Nutrițional PRO", page_icon="🍎")
 
 st.title("🍎 Asistent Nutrițional AI - Versiunea PRO")
@@ -41,7 +41,7 @@ if not st.session_state.utilizator_premium:
 else:
     st.sidebar.success("👑 CONT PREMIUM ACTIVAT - Acces Nelimitat")
 
-# --- VERIFICARE BARIERĂ DE PLATĂ AUTOMATĂ (BT PAY) ---
+# --- VERIFICARE BARIERĂ DE PLATĂ AUTOMATĂ (BT PAY PERSONALIZAT) ---
 if st.session_state.scanari_efectuate >= 3 and not st.session_state.utilizator_premium:
     st.error("⚠️ *Ai atins limita de 3 scanări gratuite pentru contul tău!*")
     
@@ -51,13 +51,13 @@ if st.session_state.scanari_efectuate >= 3 and not st.session_state.utilizator_p
     Pentru a primi acces pe viață și analize nelimitate în magazin direct pe telefonul tău, efectuați o plată de *25 RON* prin BT Pay:
     
     1. 📱 Deschideți aplicația *BT Pay* pe telefonul dvs. mobil.
-    2. 💸 Trimiteți suma de *25 RON* către numărul de telefon al administratorului aplicației.
+    2. 💸 Trimiteți suma de *25 RON* către numărul de telefon al administratorului: *0753326541*
     3. 📝 La detalii plată / explicație scrieți obligatoriu: *Abonament AI + Numele dvs.*
     
     După trimiterea banilor, apăsați pe butonul de mai jos pentru a trimite dovada pe WhatsApp, iar administratorul vă va activa contul instant!
     """)
     
-    # Butonul deschide automat o conversație pe WhatsApp pentru a trimite dovada plății
+    # Butonul deschide automat o conversație direct pe numărul tău real de WhatsApp!
     st.link_button("📲 Trimite Dovada Plății instant pe WhatsApp", "https://wa.me!")
 else:
     # --- PROCESUL NORMAL DE SCANARE ---
@@ -170,3 +170,5 @@ else:
                 buf = io.BytesIO()
                 img_qr.save(buf, format="PNG")
                 st.image(buf.getvalue(), caption="Raportul tău este stocat direct în acest cod", width=200)
+else:
+    st.info("💡 Pentru a începe, încarcă o imagine cu o etichetă reală deasupra.")
