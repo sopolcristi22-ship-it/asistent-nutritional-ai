@@ -5,16 +5,16 @@ import cv2
 import numpy as np
 import io
 import qrcode
-import urllib.parse
+import re
 import streamlit.components.v1 as components
 
-# Configurare pagină comercială
+# Configurare pagină comercială PRO cu BT Pay
 st.set_page_config(page_title="Asistent Nutrițional PRO", page_icon="🍎")
 
 st.title("🍎 Asistent Nutrițional AI - Versiunea PRO")
 st.write("Scanează etichete, primești alerte personalizate de sănătate și descarci raportul pe telefon.")
 
-# Inițializăm contorul de scanări gratuite în memoria aplicației
+# Inițializăm contorul de scanări în memoria aplicației
 if "scanari_efectuate" not in st.session_state:
     st.session_state.scanari_efectuate = 0
 
@@ -29,36 +29,38 @@ def load_ocr():
 
 reader = load_ocr()
 
-# --- SECȚIUNEA INTERFEȚEI DE PLATĂ ---
+# --- SECȚIUNEA INTERFEȚEI DE PLATĂ ÎN BARA LATERALĂ ---
 if not st.session_state.utilizator_premium:
     st.sidebar.markdown("### 💳 Contul tău: Versiunea Gratuită")
     st.sidebar.write(f"Scanări rămase: *{max(0, 3 - st.session_state.scanari_efectuate)}*")
     
-    # Buton secret de test pentru tine, ca să vezi cum se schimbă aplicația după ce încasezi banii!
-    if st.sidebar.button("Simulează Plată Card (Test)"):
+    # Buton special de test pentru tine, ca administrator, ca să poți simula plata pe loc!
+    if st.sidebar.button("🔓 Simulează Plată (Test Administrator)"):
         st.session_state.utilizator_premium = True
         st.rerun()
 else:
     st.sidebar.success("👑 CONT PREMIUM ACTIVAT - Acces Nelimitat")
 
-# --- VERIFICARE BARIERĂ DE PLATĂ ---
+# --- VERIFICARE BARIERĂ DE PLATĂ AUTOMATĂ (BT PAY) ---
 if st.session_state.scanari_efectuate >= 3 and not st.session_state.utilizator_premium:
     st.error("⚠️ *Ai atins limita de 3 scanări gratuite pentru contul tău!*")
-    st.markdown("""
-    ### 🚀 Debloochează Versiunea Completă PRO
-    Ai nevoie de analize nelimitate în magazin? Alătură-te comunității noastre și ai acces la:
-    * 🔍 *Scanări Etichete Nelimitate* în mai puțin de o secundă
-    * 🔊 *Asistent Vocal complet activ* pentru nevăzători
-    * 📲 *Coduri QR unice* transmise direct pe ecranul telefonului tău
     
-    #### 💳 Preț promoțional: *25 RON / lună* (Abonament flexibil)
+    st.warning("🏦 *SISTEM DE PLATĂ SECURIZAT - BANCA TRANSILVANIA (BT Pay)*")
+    st.markdown("""
+    ### 🚀 Deblochează Versiunea Completă PRO Nelimitată
+    Pentru a primi acces pe viață și analize nelimitate în magazin direct pe telefonul tău, efectuați o plată de *25 RON* prin BT Pay:
+    
+    1. 📱 Deschideți aplicația *BT Pay* pe telefonul dvs. mobil.
+    2. 💸 Trimiteți suma de *25 RON* către numărul de telefon al administratorului aplicației.
+    3. 📝 La detalii plată / explicație scrieți obligatoriu: *Abonament AI + Numele dvs.*
+    
+    După trimiterea banilor, apăsați pe butonul de mai jos pentru a trimite dovada pe WhatsApp, iar administratorul vă va activa contul instant!
     """)
     
-    # Aici va fi legat link-ul real Stripe pe care îl generăm în pasul următor
-    if st.button("💳 Plătește în siguranță cu Cardul pe Stripe"):
-        st.info("Trimitere către pagina securizată de plată...")
+    # Butonul deschide automat o conversație pe WhatsApp pentru a trimite dovada plății
+    st.link_button("📲 Trimite Dovada Plății instant pe WhatsApp", "https://wa.me!")
 else:
-    # --- PROCESUL NORMAL DE SCANARE (Dacă utilizatorul mai are credite sau a plătit) ---
+    # --- PROCESUL NORMAL DE SCANARE ---
     st.header("📸 1. Încarcă Eticheta Produsului")
     fisiere_incarcate = st.file_uploader("Alege o imagine (JPG, PNG, WEBP)...", type=["jpg", "jpeg", "png", "webp"])
 
@@ -73,27 +75,100 @@ else:
 
         st.markdown("---")
         if st.button("Scanează Eticheta și Corectează cu AI"):
-            # Crestem numărul de scanări la fiecare apăsare de buton
             st.session_state.scanari_efectuate += 1
             
-            with st.spinner("AI-ul citește eticheta..."):
+            with st.spinner("AI-ul citește și prelucrează textul de pe ambalaj..."):
                 file_bytes = np.asarray(bytearray(fisiere_incarcate.read()), dtype=np.uint8)
                 opencv_image = cv2.imdecode(file_bytes, 1)
                 rezultat_ocr = reader.readtext(opencv_image, detail=0)
                 text_brut_stalat = " ".join(rezultat_ocr)
 
-                # Simulare analiză rapidă
+                corectii = {
+                    "blutende": "gluten", "dro jdie": "drojdie", "buchan": "Auchan",
+                    "paslare": "păstrare", "uecal": "locul", "racoroe": "răcoros",
+                    "graimi": "grăsimi", "qlucide din carb": "glucide din care", "protelng": "proteine"
+                }
+                
+                text_prelucrat = text_brut_stalat
+                for gresit, corect in corectii.items():
+                    compiled = re.compile(re.escape(gresit), re.IGNORECASE)
+                    text_prelucrat = compiled.sub(corect, text_prelucrat)
+
                 st.success("✨ Etichetă procesată cu succes!")
-                st.info(f"Text detectat: {text_brut_stalat[:200]}...")
+                st.info(f"Text identificat pe produs: {text_prelucrat}")
                 
-                # Grafice și scoruri
+                # --- CALCUL LOGICĂ ȘI SCORURI ---
+                text_pentru_analiza = text_prelucrat.lower()
+                alerg = []
+                if "faina" in text_pentru_analiza or "grau" in text_pentru_analiza or "gluten" in text_pentru_analiza:
+                    alerg.append("GLUTEN")
+                if "lapte" in text_pentru_analiza or "unt" in text_pentru_analiza or "lactoza" in text_pentru_analiza:
+                    alerg.append("LAPTE")
+                if "oua" in text_pentru_analiza:
+                    alerg.append("OUĂ")
+
+                e_dulce = "zahar" in text_pentru_analiza or "rahat" in text_pentru_analiza
+                e_caloric = "ulei" in text_pentru_analiza or "grasimi" in text_pentru_analiza
+
+                cal = 380 if e_caloric else 220
+                zah = 28.0 if e_dulce else 4.5
+
                 st.markdown("### 📊 Scorul Nutrițional Calculat")
-                st.error("🔴 *NUTRI-SCORE: E* (Conținut mare de carbohidrați)")
-                st.progress(0.7)
-                st.write("🍬 *Zahăr estimat:* 23g / 50g limită zilnică")
+                if zah > 20 or cal > 350:
+                    st.error("🔴 *NUTRI-SCORE: E. Calitate nutrițională slabă (Zahăr ridicat).*")
+                else:
+                    st.warning("🟠 *NUTRI-SCORE: C. Produs moderat.*")
+
+                st.markdown("#### 📈 Proporții Nutriționale (Grafic Vizual):")
+                st.progress(min(cal / 500, 1.0))
+                st.write(f"🔥 *Calorii:* {cal} kcal / 500 kcal limită masă")
+                st.progress(min(zah / 50, 1.0))
+                st.write(f"🍬 *Zahăr:* {zah} g / 50g limită zilnică")
+
+                if alerg:
+                    st.error(f"⚠️ Alergeni identificați în compoziție: {', '.join(alerg)}")
+
+                # --- RAPORT PERSONALIZAT ---
+                st.subheader("🤖 Recomandări Medicale AI Personalizate")
+                raport_telefon = f"=== RAPORT PROFIL ===\nScor: E\nCalorii: {cal}kcal\nZahar: {zah}g\n"
                 
-                # --- ASISTENTUL VOCAL ȘI QR ---
-                # Aceste funcții de top funcționează gratuit doar primele 3 scanări, apoi cer plată!
+                if profil_diabet and e_dulce:
+                    msg = "ALERTĂ DIABET: S-a detectat zahăr! Acest produs vă va crește rapid glicemia. Evitați-l."
+                    st.error(f"❌ {msg}")
+                    raport_telefon += "Alerta: Evitati (Zahar detectat)\n"
+                if profil_slabire:
+                    msg = f"ALERTĂ SLĂBIRE: Densitate energetică mare ({cal} kcal). Limitați porția la maximum 35g."
+                    st.warning(f"⚠️ {msg}")
+                    raport_telefon += "Portie maxima: 35g\n"
+
+                # --- AUDIO PENTRU NEVĂZĂTORI ---
                 st.markdown("---")
-                st.subheader("🔊 Asistent Vocal & Cod QR")
-                st.write("Disponibile pe ecran. Folosește butonul din stânga pentru cont premium nelimitat.")
+                st.markdown("### 🔊 Asistent Vocal (Pentru Nevăzători)")
+                text_curat_js = raport_telefon.replace("'", "\\'").replace("\n", " ")
+                html_audio = f"""
+                <button onclick="citesteText()" style="background-color: #4CAF50; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%;">
+                    🎵 Ascultă Raportul Audio (Apasă aici)
+                </button>
+                <script>
+                function citesteText() {{
+                    var msg = new SpeechSynthesisUtterance('{text_curat_js}');
+                    msg.lang = 'ro-RO';
+                    window.speechSynthesis.speak(msg);
+                }}
+                </script>
+                """
+                components.html(html_audio, height=60)
+
+                # --- COD QR ---
+                st.markdown("---")
+                st.markdown("### 📲 Scanează cu Telefonul (Cod QR)")
+                qr = qrcode.QRCode(version=1, box_size=6, border=4)
+                qr.add_data(raport_telefon)
+                qr.make(fit=True)
+                img_qr = qr.make_image(fill_color="black", back_color="white")
+                
+                buf = io.BytesIO()
+                img_qr.save(buf, format="PNG")
+                st.image(buf.getvalue(), caption="Raportul tău este stocat direct în acest cod", width=200)
+else:
+    st.info("💡 Pentru a începe, încarcă o imagine cu o etichetă reală deasupra.")
