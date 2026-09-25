@@ -1,7 +1,7 @@
 streamlit
 requests
-easyocr
-opencv-python-headless
+
+
 numpy
 qrcode
 pillow
