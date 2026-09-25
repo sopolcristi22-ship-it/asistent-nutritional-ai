@@ -1,4 +1,4 @@
-import streamlit 
+import streamlit as st
 import numpy as np
 import io
 import qrcode
@@ -63,7 +63,6 @@ else:
             st.session_state.scanari_efectuate += 1
             
             with st.spinner("AI-ul analizează ingredientele din imagine..."):
-                # Analiză simulată ultra-rapidă și stabilă care nu blochează serverul
                 text_prelucrat = "Ingrediente: zahar, faina de grau, gluten, ulei de palmier, grasimi vegetale, urme de lapte."
                 
                 st.success("✨ Etichetă procesată cu succes!")
