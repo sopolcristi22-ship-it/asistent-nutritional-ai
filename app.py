@@ -170,5 +170,3 @@ else:
                 buf = io.BytesIO()
                 img_qr.save(buf, format="PNG")
                 st.image(buf.getvalue(), caption="Raportul tău este stocat direct în acest cod", width=200)
-else:
-    st.info("💡 Pentru a începe, încarcă o imagine cu o etichetă reală deasupra.")
