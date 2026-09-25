@@ -1,5 +1,4 @@
-import streamlit as st
-import cv2
+import streamlit 
 import numpy as np
 import io
 import qrcode
